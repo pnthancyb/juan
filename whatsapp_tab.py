@@ -13,11 +13,14 @@ from datetime import datetime
 
 from data_processor import DataProcessor
 from utils import format_duration, validate_phone_number
+from whatsapp_automation import WhatsAppAutomation
 
 class WhatsAppTab:
-    def __init__(self, parent):
+    def __init__(self, parent, language_manager):
         self.parent = parent
+        self.language_manager = language_manager
         self.data_processor = DataProcessor()
+        self.whatsapp_automation = WhatsAppAutomation()
         self.is_sending = False
         self.phone_numbers = []
         self.valid_numbers = []
@@ -105,7 +108,7 @@ class WhatsAppTab:
         self.message_text.configure(yscrollcommand=message_scrollbar.set)
         
         # Insert default message
-        default_message = "Hello! This is a business inquiry message. Please let me know if you're interested in our services."
+        default_message = self.language_manager.get_text("default_message")
         self.message_text.insert(1.0, default_message)
         
         # Sending controls section
@@ -376,3 +379,8 @@ class WhatsAppTab:
     def clear_log(self):
         """Clear the status log"""
         self.log_text.delete(1.0, tk.END)
+        
+    def update_language(self):
+        """Update UI text with current language"""
+        # This method will be called when language changes
+        pass

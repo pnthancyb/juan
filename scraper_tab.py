@@ -13,14 +13,19 @@ from datetime import datetime
 
 from data_processor import DataProcessor
 from utils import format_duration, validate_file_path
+from real_scraper import GoogleMapsScraper, SmartDelayScraper
 
 class ScraperTab:
-    def __init__(self, parent):
+    def __init__(self, parent, language_manager):
         self.parent = parent
+        self.language_manager = language_manager
         self.data_processor = DataProcessor()
+        self.real_scraper = GoogleMapsScraper()
+        self.smart_delay = SmartDelayScraper()
         self.is_scraping = False
         self.start_time = None
         self.scraped_data = []
+        self.use_real_scraper = True  # Enable real scraping by default
         
         self.create_widgets()
         self.setup_timer()
@@ -34,11 +39,11 @@ class ScraperTab:
         self.frame.rowconfigure(4, weight=1)
         
         # Keywords file section
-        keywords_frame = ttk.LabelFrame(self.frame, text="Keywords Configuration", padding="10")
+        keywords_frame = ttk.LabelFrame(self.frame, text=self.language_manager.get_text("keywords_config"), padding="10")
         keywords_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         keywords_frame.columnconfigure(1, weight=1)
         
-        ttk.Label(keywords_frame, text="Keywords File:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
+        ttk.Label(keywords_frame, text=self.language_manager.get_text("keywords_file")).grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
         
         self.keywords_path_var = tk.StringVar(value="keywords.txt")
         self.keywords_entry = ttk.Entry(keywords_frame, textvariable=self.keywords_path_var, state="readonly")
@@ -46,33 +51,72 @@ class ScraperTab:
         
         ttk.Button(
             keywords_frame, 
-            text="Browse", 
+            text=self.language_manager.get_text("browse"), 
             command=self.browse_keywords_file
         ).grid(row=0, column=2)
         
+        # Business count configuration
+        ttk.Label(keywords_frame, text=self.language_manager.get_text("business_count")).grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=(10, 0))
+        
+        self.business_count_var = tk.IntVar(value=50)
+        business_count_frame = ttk.Frame(keywords_frame)
+        business_count_frame.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(0, 10), pady=(10, 0))
+        
+        self.business_count_scale = ttk.Scale(
+            business_count_frame,
+            from_=5,
+            to=500,
+            variable=self.business_count_var,
+            orient=tk.HORIZONTAL,
+            length=200
+        )
+        self.business_count_scale.grid(row=0, column=0, sticky=(tk.W, tk.E))
+        
+        self.business_count_label = ttk.Label(business_count_frame, text="50")
+        self.business_count_label.grid(row=0, column=1, padx=(10, 0))
+        
+        # Bind scale to update label
+        self.business_count_scale.configure(command=self.update_business_count_label)
+        
+        # Scraping mode selection
+        mode_frame = ttk.Frame(keywords_frame)
+        mode_frame.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky=(tk.W, tk.E))
+        
+        ttk.Label(mode_frame, text="Scraping Mode:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
+        
+        self.scraping_mode_var = tk.StringVar(value="real")
+        real_radio = ttk.Radiobutton(mode_frame, text="Real Google Maps", variable=self.scraping_mode_var, value="real")
+        real_radio.grid(row=0, column=1, padx=(0, 10))
+        
+        mock_radio = ttk.Radiobutton(mode_frame, text="Mock Data (Testing)", variable=self.scraping_mode_var, value="mock")
+        mock_radio.grid(row=0, column=2)
+        
         # Control buttons section
-        controls_frame = ttk.Frame(self.frame)
-        controls_frame.grid(row=1, column=0, columnspan=2, pady=10)
+        controls_frame = ttk.LabelFrame(self.frame, text=self.language_manager.get_text("scraping_controls"), padding="10")
+        controls_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
+        
+        buttons_frame = ttk.Frame(controls_frame)
+        buttons_frame.grid(row=0, column=0)
         
         self.start_button = ttk.Button(
-            controls_frame, 
-            text="Start Scraping", 
+            buttons_frame, 
+            text=self.language_manager.get_text("start_scraping"), 
             command=self.start_scraping,
             style="Accent.TButton"
         )
         self.start_button.grid(row=0, column=0, padx=(0, 10))
         
         self.stop_button = ttk.Button(
-            controls_frame, 
-            text="Stop Scraping", 
+            buttons_frame, 
+            text=self.language_manager.get_text("stop_scraping"), 
             command=self.stop_scraping,
             state="disabled"
         )
         self.stop_button.grid(row=0, column=1, padx=(0, 10))
         
         self.export_button = ttk.Button(
-            controls_frame, 
-            text="Export Results", 
+            buttons_frame, 
+            text=self.language_manager.get_text("export_results"), 
             command=self.export_results,
             state="disabled"
         )
@@ -176,6 +220,16 @@ class ScraperTab:
         """Clear the console output"""
         self.console_text.delete(1.0, tk.END)
         
+    def update_business_count_label(self, value):
+        """Update the business count label"""
+        count = int(float(value))
+        self.business_count_label.config(text=str(count))
+        
+    def update_language(self):
+        """Update UI text with current language"""
+        # This method will be called when language changes
+        pass
+        
     def start_scraping(self):
         """Start the scraping process"""
         keywords_file = self.keywords_path_var.get()
@@ -224,36 +278,66 @@ class ScraperTab:
         """Worker thread for scraping process"""
         try:
             total_keywords = len(keywords)
+            business_count = int(self.business_count_var.get())
+            use_real_scraper = self.scraping_mode_var.get() == "real"
+            
+            # Initialize real scraper if needed
+            if use_real_scraper:
+                self.real_scraper.is_scraping = True
+                if not self.real_scraper.setup_driver():
+                    self.log_message("Failed to setup Chrome driver. Falling back to mock data.")
+                    use_real_scraper = False
             
             for i, keyword in enumerate(keywords):
                 if not self.is_scraping:
                     break
                     
-                self.log_message(f"Processing keyword: {keyword}")
+                self.log_message(f"{self.language_manager.get_text('processing_keyword')} {keyword}")
                 
-                # Simulate scraping process with mock data
-                mock_results = self.data_processor.simulate_scraping(keyword)
-                self.scraped_data.extend(mock_results)
+                if use_real_scraper:
+                    # Use real Google Maps scraper
+                    try:
+                        results = self.real_scraper.scrape_with_fallback(keyword, business_count)
+                        if results:
+                            self.scraped_data.extend(results)
+                            self.log_message(f"Found {len(results)} businesses for '{keyword}'")
+                        else:
+                            self.log_message(f"No results found for '{keyword}'")
+                            
+                        # Smart delay between keywords
+                        if i < total_keywords - 1:
+                            delay = self.smart_delay.get_smart_delay()
+                            self.log_message(f"Waiting {delay:.1f} seconds before next keyword...")
+                            time.sleep(delay)
+                            
+                    except Exception as e:
+                        self.log_message(f"Error scraping '{keyword}': {str(e)}")
+                        continue
+                else:
+                    # Use mock data for testing
+                    mock_results = self.data_processor.simulate_scraping(keyword)
+                    self.scraped_data.extend(mock_results)
                 
                 # Update progress
                 progress = ((i + 1) / total_keywords) * 100
                 self.progress_var.set(progress)
-                self.results_var.set(f"{len(self.scraped_data)} businesses found")
-                
-                # Simulate processing delay
-                time.sleep(1)
+                self.results_var.set(f"{len(self.scraped_data)} {self.language_manager.get_text('businesses_found')}")
                 
             if self.is_scraping:
-                self.log_message(f"Scraping completed. Found {len(self.scraped_data)} businesses.")
-                self.status_var.set("Completed")
+                self.log_message(self.language_manager.get_text("scraping_completed").format(len(self.scraped_data)))
+                self.status_var.set(self.language_manager.get_text("completed"))
             else:
-                self.log_message("Scraping stopped by user.")
-                self.status_var.set("Stopped")
+                self.log_message(self.language_manager.get_text("scraping_stopped"))
+                self.status_var.set(self.language_manager.get_text("stopped"))
                 
         except Exception as e:
-            self.log_message(f"Error during scraping: {str(e)}")
-            self.status_var.set("Error")
+            self.log_message(self.language_manager.get_text("error_during_scraping").format(str(e)))
+            self.status_var.set(self.language_manager.get_text("error"))
         finally:
+            # Cleanup real scraper
+            if use_real_scraper:
+                self.real_scraper.cleanup()
+            
             # Update UI
             self.frame.after(0, self._scraping_finished)
             
