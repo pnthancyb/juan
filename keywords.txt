@@ -1,0 +1,20 @@
+restaurant
+coffee shop
+dental clinic
+auto repair
+hair salon
+gym fitness
+pizza delivery
+bookstore
+pharmacy
+pet store
+florist
+bakery
+hardware store
+electronics store
+clothing boutique
+real estate agent
+law firm
+accounting service
+wedding planner
+photography studio
