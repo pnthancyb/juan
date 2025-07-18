@@ -494,3 +494,7 @@ class LanguageManager:
     def get_current_language(self):
         """Get current language code"""
         return self.current_language
+    
+    def get_available_languages(self):
+        """Get available languages dictionary (alias for get_languages)"""
+        return self.get_languages()
