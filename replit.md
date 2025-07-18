@@ -115,11 +115,13 @@ juan/
 ### Key Architectural Decisions
 
 1. **Tkinter Choice**: Chosen for zero external dependencies and cross-platform compatibility
-2. **Mock Data Simulation**: Uses simulated data instead of real scraping to avoid legal/technical complications
-3. **Modular Design**: Separate files for each major component for maintainability
-4. **Threading Model**: Non-blocking UI operations using Python threading
-5. **CSV-Based Data Exchange**: Simple, universal format for data import/export
-6. **Regex Phone Validation**: Flexible international phone number format support
+2. **Mock Data Only**: Simplified to use only mock data generation for business simulation
+3. **Clean Interface**: Removed dark mode, emojis, and complex UI elements for professional look
+4. **Instant Language Switching**: Language changes without requiring application restart
+5. **Modular Design**: Separate files for each major component for maintainability
+6. **Threading Model**: Non-blocking UI operations using Python threading
+7. **CSV-Based Data Exchange**: Fixed export to use dynamic field names matching generated data
+8. **Groq AI Integration**: AI-powered message generation with multiple personas
 
 ### Performance Considerations
 - Simulated delays (0.5-2.0 seconds) for realistic scraping simulation
@@ -132,3 +134,14 @@ juan/
 - Phone number sanitization and validation
 - Read-only file access patterns
 - No external network connections in current implementation
+
+## Recent Changes
+
+### July 18, 2025 - Major Interface Simplification
+- **Removed Dark Mode**: Returned to clean, light interface as requested
+- **Fixed Language Switching**: Now changes immediately without restart
+- **Removed Emojis**: Clean professional interface without emoji elements
+- **Simplified Scraper**: Only mock data scraper now, removed real scraping options
+- **Fixed CSV Export**: Resolved "dict contains fields not in fieldnames: 'Rating'" error
+- **Optimized Performance**: Streamlined code, removed unnecessary complexity
+- **Clean UI**: Professional interface matching original design preferences

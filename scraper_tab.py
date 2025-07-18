@@ -14,26 +14,22 @@ from datetime import datetime
 
 from data_processor import DataProcessor
 from utils import format_duration, validate_file_path
-from real_scraper import GoogleMapsScraper, SmartDelayScraper
+# Removed real_scraper import - using only mock data now
 
 class ScraperTab:
-    def __init__(self, parent, language_manager, theme_manager):
+    def __init__(self, parent, language_manager):
         self.parent = parent
         self.language_manager = language_manager
-        self.theme_manager = theme_manager
         self.data_processor = DataProcessor()
-        self.real_scraper = GoogleMapsScraper()
-        self.smart_delay = SmartDelayScraper()
         self.is_scraping = False
         self.start_time = None
         self.scraped_data = []
-        self.use_real_scraper = True  # Enable real scraping by default
         
         self.create_widgets()
         self.setup_timer()
         
         # Add tab to parent notebook
-        self.parent.add(self.frame, text="🗺️ Maps Scraper")
+        self.parent.add(self.frame, text=self.language_manager.get_text("scraper_tab"))
         
     def create_widgets(self):
         """Create the scraper tab interface"""
@@ -83,22 +79,11 @@ class ScraperTab:
         # Bind scale to update label
         self.business_count_scale.configure(command=self.update_business_count_label)
         
-        # Scraping mode selection
-        mode_frame = ttk.Frame(keywords_frame)
-        mode_frame.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky=(tk.W, tk.E))
-        
-        ttk.Label(mode_frame, text="Scraping Mode:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
-        
-        self.scraping_mode_var = tk.StringVar(value="real")
-        real_radio = ttk.Radiobutton(mode_frame, text="Real Google Maps", variable=self.scraping_mode_var, value="real")
-        real_radio.grid(row=0, column=1, padx=(0, 10))
-        
-        mock_radio = ttk.Radiobutton(mode_frame, text="Mock Data (Testing)", variable=self.scraping_mode_var, value="mock")
-        mock_radio.grid(row=0, column=2)
+
         
         # Control buttons section
         controls_frame = ttk.LabelFrame(self.frame, text=self.language_manager.get_text("scraping_controls"), padding="10")
-        controls_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
+        controls_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         buttons_frame = ttk.Frame(controls_frame)
         buttons_frame.grid(row=0, column=0)
@@ -129,7 +114,7 @@ class ScraperTab:
         
         # Status section
         status_frame = ttk.LabelFrame(self.frame, text="Scraping Status", padding="10")
-        status_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
+        status_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         status_frame.columnconfigure(1, weight=1)
         
         ttk.Label(status_frame, text="Duration:").grid(row=0, column=0, sticky=tk.W)
@@ -284,16 +269,6 @@ class ScraperTab:
         try:
             total_keywords = len(keywords)
             business_count = int(self.business_count_var.get())
-            use_real_scraper = self.scraping_mode_var.get() == "real"
-            
-            # Initialize real scraper if needed
-            if use_real_scraper:
-                self.real_scraper.is_scraping = True
-                self.log_message("Setting up Chrome WebDriver...")
-                if not self.real_scraper.setup_driver():
-                    self.log_message("Chrome not available. Real scraping requires Chrome browser.")
-                    self.log_message("Switching to mock data mode for demonstration.")
-                    use_real_scraper = False
             
             for i, keyword in enumerate(keywords):
                 if not self.is_scraping:
@@ -301,32 +276,12 @@ class ScraperTab:
                     
                 self.log_message(f"{self.language_manager.get_text('processing_keyword')} {keyword}")
                 
-                if use_real_scraper:
-                    # Use real Google Maps scraper
-                    try:
-                        results = self.real_scraper.scrape_with_fallback(keyword, business_count)
-                        if results:
-                            self.scraped_data.extend(results)
-                            self.log_message(f"Found {len(results)} businesses for '{keyword}'")
-                        else:
-                            self.log_message(f"No results found for '{keyword}'")
-                            
-                        # Smart delay between keywords
-                        if i < total_keywords - 1:
-                            delay = self.smart_delay.get_smart_delay()
-                            self.log_message(f"Waiting {delay:.1f} seconds before next keyword...")
-                            time.sleep(delay)
-                            
-                    except Exception as e:
-                        self.log_message(f"Error scraping '{keyword}': {str(e)}")
-                        continue
-                else:
-                    # Use mock data for testing
-                    mock_results = self.data_processor.simulate_scraping(keyword, business_count)
-                    self.scraped_data.extend(mock_results)
-                    
-                    # Simulate processing time for mock data
-                    time.sleep(random.uniform(0.5, 1.5))
+                # Generate mock data for testing
+                mock_results = self.data_processor.simulate_scraping(keyword, business_count)
+                self.scraped_data.extend(mock_results)
+                
+                # Simulate processing time
+                time.sleep(random.uniform(0.5, 1.5))
                 
                 # Update progress
                 progress = ((i + 1) / total_keywords) * 100
@@ -344,10 +299,6 @@ class ScraperTab:
             self.log_message(self.language_manager.get_text("error_during_scraping").format(str(e)))
             self.status_var.set(self.language_manager.get_text("error"))
         finally:
-            # Cleanup real scraper
-            if use_real_scraper:
-                self.real_scraper.cleanup()
-            
             # Update UI
             self.frame.after(0, self._scraping_finished)
             
@@ -380,9 +331,12 @@ class ScraperTab:
         if file_path:
             try:
                 with open(file_path, 'w', newline='', encoding='utf-8') as f:
-                    writer = csv.DictWriter(f, fieldnames=['Keyword', 'Business Name', 'Address', 'Phone', 'Website'])
-                    writer.writeheader()
-                    writer.writerows(self.scraped_data)
+                    # Use the actual field names from the data
+                    if self.scraped_data:
+                        fieldnames = list(self.scraped_data[0].keys())
+                        writer = csv.DictWriter(f, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(self.scraped_data)
                     
                 self.log_message(f"Results exported to: {file_path}")
                 messagebox.showinfo("Success", f"Results exported successfully to:\n{file_path}")

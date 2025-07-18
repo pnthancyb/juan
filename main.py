@@ -1,6 +1,6 @@
 """
-Juan - Maps Scraper & WhatsApp Blaster - Professional Edition
-Main application entry point with tabbed interface, AI integration, and dark mode
+Juan - Maps Scraper & WhatsApp Blaster
+Main application entry point with tabbed interface
 """
 
 import tkinter as tk
@@ -14,48 +14,40 @@ from whatsapp_tab import WhatsAppTab
 from ai_tab import AITab
 from settings_tab import SettingsTab
 from language_manager import LanguageManager
-from theme_manager import ThemeManager
 
 
 class MainApplication:
     def __init__(self):
         self.root = tk.Tk()
         self.language_manager = LanguageManager()
-        self.theme_manager = ThemeManager()
         
         self.setup_window()
-        self.apply_theme()
         self.create_widgets()
         
     def setup_window(self):
         """Configure the main window properties"""
-        self.root.title("Juan - Maps Scraper & WhatsApp Blaster v2.0")
-        self.root.geometry("1000x800")
-        self.root.minsize(900, 700)
+        self.root.title("Juan - Maps Scraper & WhatsApp Blaster")
+        self.root.geometry("950x750")
+        self.root.minsize(850, 650)
         
-        # Center window on screen
-        self.root.update_idletasks()
-        width = self.root.winfo_width()
-        height = self.root.winfo_height()
-        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
-        self.root.geometry(f'{width}x{height}+{x}+{y}')
+        # Configure colors and style
+        self.root.configure(bg='#f0f0f0')
         
-        # Configure window icon (if available)
-        try:
-            # You can add an icon file here
-            pass
-        except:
-            pass
-            
-    def apply_theme(self):
-        """Apply current theme to the application"""
-        self.colors = self.theme_manager.apply_theme(self.root)
+        # Configure ttk style
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Custom color scheme
+        style.configure('TNotebook', background='#f0f0f0')
+        style.configure('TNotebook.Tab', padding=[20, 10])
+        style.configure('TFrame', background='#f0f0f0')
+        style.configure('TLabel', background='#f0f0f0', foreground='#333333')
+        style.configure('TButton', padding=[10, 5])
         
     def create_widgets(self):
         """Create the main interface widgets"""
         # Main container
-        main_frame = ttk.Frame(self.root, padding="15")
+        main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights
@@ -64,65 +56,38 @@ class MainApplication:
         main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(2, weight=1)
         
-        # Header section
-        self.create_header(main_frame)
-        
-        # Language and theme controls
-        self.create_controls(main_frame)
-        
-        # Create notebook with tabs
-        self.create_notebook(main_frame)
-        
-    def create_header(self, parent):
-        """Create application header"""
-        header_frame = ttk.Frame(parent)
-        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
-        header_frame.columnconfigure(0, weight=1)
+        # Top frame for title and language selector
+        top_frame = ttk.Frame(main_frame)
+        top_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        top_frame.columnconfigure(0, weight=1)
         
         # Application title
         title_label = ttk.Label(
-            header_frame, 
+            top_frame, 
             text="Juan - Maps Scraper & WhatsApp Blaster",
-            font=('Arial', 18, 'bold')
+            font=('Arial', 16, 'bold')
         )
-        title_label.grid(row=0, column=0, pady=(0, 5))
-        
-        # Subtitle
-        subtitle_label = ttk.Label(
-            header_frame,
-            text="Professional Edition v2.0 - AI-Powered Business Data & Communication Tool",
-            font=('Arial', 10, 'italic')
-        )
-        subtitle_label.grid(row=1, column=0)
-        
-    def create_controls(self, parent):
-        """Create control section"""
-        controls_frame = ttk.Frame(parent)
-        controls_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
-        controls_frame.columnconfigure(2, weight=1)
+        title_label.grid(row=0, column=0, pady=(0, 10))
         
         # Language selector
-        ttk.Label(controls_frame, text="Language:").grid(row=0, column=0, padx=(0, 5))
+        language_frame = ttk.Frame(top_frame)
+        language_frame.grid(row=1, column=0, pady=(0, 10))
+        
+        ttk.Label(language_frame, text="Language:").grid(row=0, column=0, padx=(0, 5))
         
         self.language_var = tk.StringVar(value=self.language_manager.get_current_language())
         language_combo = ttk.Combobox(
-            controls_frame,
+            language_frame,
             textvariable=self.language_var,
             values=list(self.language_manager.get_available_languages().keys()),
             state="readonly",
             width=15
         )
-        language_combo.grid(row=0, column=1, padx=(0, 20))
+        language_combo.grid(row=0, column=1)
         language_combo.bind('<<ComboboxSelected>>', self.on_language_change)
         
-        # Theme toggle button
-        theme_text = "🌙 Dark" if not self.theme_manager.is_dark_mode() else "☀️ Light"
-        self.theme_button = ttk.Button(
-            controls_frame,
-            text=f"Theme: {theme_text}",
-            command=self.toggle_theme
-        )
-        self.theme_button.grid(row=0, column=3, padx=(20, 0))
+        # Create notebook with tabs
+        self.create_notebook(main_frame)
         
     def create_notebook(self, parent):
         """Create notebook with all tabs"""
@@ -130,23 +95,19 @@ class MainApplication:
         self.notebook = ttk.Notebook(parent)
         self.notebook.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Configure notebook styling
-        style = ttk.Style()
-        style.configure('TNotebook.Tab', padding=[15, 8])
-        
         # Create tabs
         try:
-            # Google Maps Scraper Tab
-            self.scraper_tab = ScraperTab(self.notebook, self.language_manager, self.theme_manager)
+            # Maps Scraper Tab
+            self.scraper_tab = ScraperTab(self.notebook, self.language_manager)
             
             # WhatsApp Blaster Tab  
-            self.whatsapp_tab = WhatsAppTab(self.notebook, self.language_manager, self.theme_manager)
+            self.whatsapp_tab = WhatsAppTab(self.notebook, self.language_manager)
             
             # AI Message Generator Tab
-            self.ai_tab = AITab(self.notebook, self.language_manager, self.theme_manager)
+            self.ai_tab = AITab(self.notebook, self.language_manager)
             
             # Settings Tab
-            self.settings_tab = SettingsTab(self.notebook, self.language_manager, self.theme_manager)
+            self.settings_tab = SettingsTab(self.notebook, self.language_manager)
             
         except Exception as e:
             error_msg = f"Error creating tabs: {str(e)}"
@@ -158,26 +119,30 @@ class MainApplication:
         selected_language = self.language_var.get()
         self.language_manager.set_language(selected_language)
         
+        # Update all UI elements immediately
+        self.update_ui_language()
+        
+    def update_ui_language(self):
+        """Update all UI elements with new language"""
         # Update window title
         self.root.title(self.language_manager.get_text("app_title"))
         
-        messagebox.showinfo(
-            "Language Changed",
-            "Language will be fully applied when you restart the application."
-        )
+        # Update tab names
+        if hasattr(self, 'scraper_tab'):
+            self.notebook.tab(self.scraper_tab.frame, text=self.language_manager.get_text("scraper_tab"))
+        if hasattr(self, 'whatsapp_tab'):
+            self.notebook.tab(self.whatsapp_tab.frame, text=self.language_manager.get_text("whatsapp_tab"))
+        if hasattr(self, 'ai_tab'):
+            self.notebook.tab(self.ai_tab.frame, text="AI Generator")
+        if hasattr(self, 'settings_tab'):
+            self.notebook.tab(self.settings_tab.frame, text="Settings")
         
-    def toggle_theme(self):
-        """Toggle between light and dark theme"""
-        self.theme_manager.toggle_dark_mode()
-        
-        # Update button text
-        theme_text = "🌙 Dark" if not self.theme_manager.is_dark_mode() else "☀️ Light"
-        self.theme_button.config(text=f"Theme: {theme_text}")
-        
-        messagebox.showinfo(
-            "Theme Changed",
-            "Theme will be fully applied when you restart the application."
-        )
+        # Trigger update in each tab
+        try:
+            self.scraper_tab.update_language()
+            self.whatsapp_tab.update_language()
+        except:
+            pass
         
     def run(self):
         """Start the application"""

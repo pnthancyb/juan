@@ -10,14 +10,13 @@ from groq_ai import GroqAI
 
 
 class AITab:
-    def __init__(self, parent_notebook, language_manager, theme_manager):
+    def __init__(self, parent_notebook, language_manager):
         self.language_manager = language_manager
-        self.theme_manager = theme_manager
         self.groq_ai = GroqAI()
         
         # Create the tab frame
         self.frame = ttk.Frame(parent_notebook, padding="20")
-        parent_notebook.add(self.frame, text="🤖 AI Generator")
+        parent_notebook.add(self.frame, text="AI Generator")
         
         # Variables
         self.persona_var = tk.StringVar(value="official")
@@ -52,14 +51,14 @@ class AITab:
         
     def create_header(self, parent):
         """Create header section"""
-        header_frame = ttk.LabelFrame(parent, text="🤖 AI Message Generator", padding="15")
+        header_frame = ttk.LabelFrame(parent, text="AI Message Generator", padding="15")
         header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 15))
         
         # Description
         desc_text = """Generate professional messages using AI personas:
-🏢 Official - Professional business communication
-🎯 Spam - High-converting direct marketing  
-💼 Marketer - Expert marketing with storytelling"""
+Official - Professional business communication
+Spam Expert - High-converting direct marketing  
+Marketer - Expert marketing with storytelling"""
         
         ttk.Label(header_frame, text=desc_text, justify="left").pack(anchor="w")
         
