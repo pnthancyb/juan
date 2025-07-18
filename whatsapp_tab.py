@@ -16,9 +16,10 @@ from utils import format_duration, validate_phone_number
 from whatsapp_automation import WhatsAppAutomation
 
 class WhatsAppTab:
-    def __init__(self, parent, language_manager):
+    def __init__(self, parent, language_manager, theme_manager):
         self.parent = parent
         self.language_manager = language_manager
+        self.theme_manager = theme_manager
         self.data_processor = DataProcessor()
         self.whatsapp_automation = WhatsAppAutomation()
         self.is_sending = False
@@ -26,6 +27,9 @@ class WhatsAppTab:
         self.valid_numbers = []
         
         self.create_widgets()
+        
+        # Add tab to parent notebook
+        self.parent.add(self.frame, text="📱 WhatsApp Blaster")
         
     def create_widgets(self):
         """Create the WhatsApp tab interface"""

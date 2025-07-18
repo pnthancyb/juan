@@ -17,9 +17,10 @@ from utils import format_duration, validate_file_path
 from real_scraper import GoogleMapsScraper, SmartDelayScraper
 
 class ScraperTab:
-    def __init__(self, parent, language_manager):
+    def __init__(self, parent, language_manager, theme_manager):
         self.parent = parent
         self.language_manager = language_manager
+        self.theme_manager = theme_manager
         self.data_processor = DataProcessor()
         self.real_scraper = GoogleMapsScraper()
         self.smart_delay = SmartDelayScraper()
@@ -30,6 +31,9 @@ class ScraperTab:
         
         self.create_widgets()
         self.setup_timer()
+        
+        # Add tab to parent notebook
+        self.parent.add(self.frame, text="🗺️ Maps Scraper")
         
     def create_widgets(self):
         """Create the scraper tab interface"""
