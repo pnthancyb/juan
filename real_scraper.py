@@ -28,6 +28,18 @@ class GoogleMapsScraper:
     def setup_driver(self):
         """Setup Chrome WebDriver with optimal settings"""
         try:
+            # Check if Chrome is available
+            import subprocess
+            try:
+                subprocess.run(['google-chrome', '--version'], capture_output=True, check=True)
+                chrome_available = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                chrome_available = False
+            
+            if not chrome_available:
+                print("Chrome browser not found. Please install Chrome for real scraping.")
+                return False
+            
             chrome_options = Options()
             
             # High-performance Chrome flags
@@ -39,8 +51,6 @@ class GoogleMapsScraper:
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--disable-javascript")
-            chrome_options.add_argument("--disable-css")
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
             chrome_options.add_argument("--disable-features=TranslateUI")
@@ -53,8 +63,17 @@ class GoogleMapsScraper:
             chrome_options.add_argument("--disable-background-networking")
             chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             
-            # Use undetected-chromedriver for better anti-detection
-            self.driver = uc.Chrome(options=chrome_options)
+            # Try to use undetected-chromedriver, fall back to regular webdriver
+            try:
+                self.driver = uc.Chrome(options=chrome_options)
+            except Exception as e:
+                print(f"Failed to use undetected-chromedriver: {e}")
+                from selenium.webdriver.chrome.service import Service
+                from webdriver_manager.chrome import ChromeDriverManager
+                
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            
             self.driver.set_window_size(1920, 1080)
             
             # Set up WebDriverWait

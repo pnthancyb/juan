@@ -9,6 +9,7 @@ import threading
 import time
 import csv
 import os
+import random
 from datetime import datetime
 
 from data_processor import DataProcessor
@@ -68,7 +69,7 @@ class ScraperTab:
             to=500,
             variable=self.business_count_var,
             orient=tk.HORIZONTAL,
-            length=200
+            length=400
         )
         self.business_count_scale.grid(row=0, column=0, sticky=(tk.W, tk.E))
         
@@ -284,8 +285,10 @@ class ScraperTab:
             # Initialize real scraper if needed
             if use_real_scraper:
                 self.real_scraper.is_scraping = True
+                self.log_message("Setting up Chrome WebDriver...")
                 if not self.real_scraper.setup_driver():
-                    self.log_message("Failed to setup Chrome driver. Falling back to mock data.")
+                    self.log_message("Chrome not available. Real scraping requires Chrome browser.")
+                    self.log_message("Switching to mock data mode for demonstration.")
                     use_real_scraper = False
             
             for i, keyword in enumerate(keywords):
@@ -315,8 +318,11 @@ class ScraperTab:
                         continue
                 else:
                     # Use mock data for testing
-                    mock_results = self.data_processor.simulate_scraping(keyword)
+                    mock_results = self.data_processor.simulate_scraping(keyword, business_count)
                     self.scraped_data.extend(mock_results)
+                    
+                    # Simulate processing time for mock data
+                    time.sleep(random.uniform(0.5, 1.5))
                 
                 # Update progress
                 progress = ((i + 1) / total_keywords) * 100

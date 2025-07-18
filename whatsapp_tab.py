@@ -134,17 +134,27 @@ class WhatsAppTab:
         )
         self.stop_send_button.grid(row=0, column=1, padx=(0, 10))
         
-        # Delay settings
-        ttk.Label(controls_grid, text="Delay (seconds):").grid(row=0, column=2, padx=(20, 5))
-        self.delay_var = tk.StringVar(value="5")
+        # Smart delay settings
+        ttk.Label(controls_grid, text="Smart Delay Mode:").grid(row=0, column=2, padx=(20, 5))
+        self.smart_delay_var = tk.BooleanVar(value=True)
+        smart_delay_check = ttk.Checkbutton(
+            controls_grid, 
+            text="Auto (8-30s)", 
+            variable=self.smart_delay_var
+        )
+        smart_delay_check.grid(row=0, column=3, padx=(5, 10))
+        
+        # Manual delay option
+        ttk.Label(controls_grid, text="Manual Delay:").grid(row=0, column=4, padx=(10, 5))
+        self.delay_var = tk.StringVar(value="10")
         delay_spinbox = ttk.Spinbox(
             controls_grid, 
-            from_=1, 
+            from_=5, 
             to=60, 
             width=5, 
             textvariable=self.delay_var
         )
-        delay_spinbox.grid(row=0, column=3)
+        delay_spinbox.grid(row=0, column=5)
         
         # Sending status section
         status_frame = ttk.LabelFrame(self.frame, text="Sending Status", padding="10")
@@ -291,7 +301,7 @@ class WhatsAppTab:
         # Confirm sending
         result = messagebox.askyesno(
             "Confirm Sending", 
-            f"Send message to {len(self.valid_numbers)} phone numbers?\n\nThis will simulate the sending process."
+            f"Send message to {len(self.valid_numbers)} phone numbers?\n\nThis will open WhatsApp Web in Chrome browser."
         )
         
         if not result:
@@ -320,27 +330,86 @@ class WhatsAppTab:
         """Worker thread for sending messages"""
         try:
             total_numbers = len(numbers)
-            delay = int(self.delay_var.get())
+            use_smart_delay = self.smart_delay_var.get()
+            manual_delay = int(self.delay_var.get())
             sent_count = 0
             
-            for i, number in enumerate(numbers):
-                if not self.is_sending:
-                    break
+            # Check if Chrome is available for real WhatsApp automation
+            import subprocess
+            try:
+                subprocess.run(['google-chrome', '--version'], capture_output=True, check=True)
+                chrome_available = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                chrome_available = False
+            
+            if not chrome_available:
+                self.log_message("Chrome browser not found. WhatsApp Web automation requires Chrome.")
+                self.log_message("Simulating message sending for demonstration...")
+                
+                # Simulate sending without Chrome
+                for i, number in enumerate(numbers):
+                    if not self.is_sending:
+                        break
+                        
+                    # Simulate sending message
+                    self.log_message(f"Simulating message to {number}")
                     
-                # Simulate sending message
-                self.log_message(f"Sending message to {number}")
+                    # Use appropriate delay
+                    if use_smart_delay:
+                        delay = self.whatsapp_automation.smart_delay.get_smart_delay()
+                    else:
+                        delay = manual_delay
+                    
+                    time.sleep(delay)
+                    
+                    sent_count += 1
+                    
+                    # Update progress
+                    progress = ((i + 1) / total_numbers) * 100
+                    self.send_progress_bar_var.set(progress)
+                    self.send_progress_var.set(f"{sent_count} / {total_numbers}")
+                    
+                    self.log_message(f"Message simulated for {number} (Chrome required for real sending)")
+                    
+            else:
+                # Real WhatsApp automation with Chrome
+                self.log_message("Setting up WhatsApp Web automation...")
                 
-                # Simulate processing delay
-                time.sleep(delay)
+                if not self.whatsapp_automation.setup_driver():
+                    self.log_message("Failed to setup WhatsApp Web. Falling back to simulation.")
+                    chrome_available = False
                 
-                sent_count += 1
-                
-                # Update progress
-                progress = ((i + 1) / total_numbers) * 100
-                self.send_progress_bar_var.set(progress)
-                self.send_progress_var.set(f"{sent_count} / {total_numbers}")
-                
-                self.log_message(f"Message sent to {number} successfully")
+                if chrome_available:
+                    # Open WhatsApp Web first
+                    if self.whatsapp_automation.open_whatsapp_web(self.log_message):
+                        # Send messages using real automation
+                        for i, number in enumerate(numbers):
+                            if not self.is_sending:
+                                break
+                            
+                            success = self.whatsapp_automation.send_message(number, message, self.log_message)
+                            
+                            if success:
+                                sent_count += 1
+                                
+                            # Update progress
+                            progress = ((i + 1) / total_numbers) * 100
+                            self.send_progress_bar_var.set(progress)
+                            self.send_progress_var.set(f"{sent_count} / {total_numbers}")
+                            
+                            # Smart delay between messages
+                            if use_smart_delay:
+                                delay = self.whatsapp_automation.smart_delay.get_smart_delay()
+                            else:
+                                delay = manual_delay
+                            
+                            if i < total_numbers - 1:  # Don't delay after last message
+                                time.sleep(delay)
+                    else:
+                        self.log_message("Failed to open WhatsApp Web. Please check your connection.")
+                        
+                # Clean up
+                self.whatsapp_automation.cleanup()
                 
             if self.is_sending:
                 self.log_message(f"Sending completed. {sent_count} messages sent.")

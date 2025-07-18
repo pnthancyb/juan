@@ -26,6 +26,18 @@ class WhatsAppAutomation:
     def setup_driver(self, headless=False):
         """Setup Chrome WebDriver for WhatsApp Web"""
         try:
+            # Check if Chrome is available
+            import subprocess
+            try:
+                subprocess.run(['google-chrome', '--version'], capture_output=True, check=True)
+                chrome_available = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                chrome_available = False
+            
+            if not chrome_available:
+                print("Chrome browser not found. Please install Chrome for WhatsApp Web automation.")
+                return False
+            
             chrome_options = Options()
             
             # WhatsApp Web requires a visible browser for QR code scanning
@@ -48,8 +60,17 @@ class WhatsAppAutomation:
             # Add user data directory to persist login
             chrome_options.add_argument("--user-data-dir=./chrome_profile")
             
-            # Use undetected-chromedriver
-            self.driver = uc.Chrome(options=chrome_options)
+            # Try to use undetected-chromedriver, fall back to regular webdriver
+            try:
+                self.driver = uc.Chrome(options=chrome_options)
+            except Exception as e:
+                print(f"Failed to use undetected-chromedriver: {e}")
+                from selenium.webdriver.chrome.service import Service
+                from webdriver_manager.chrome import ChromeDriverManager
+                
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            
             self.driver.set_window_size(1920, 1080)
             
             # Set up WebDriverWait
